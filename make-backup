@@ -48,7 +48,7 @@ samba_user=undefined
 server_address=undefined
 samba_share=undefined
 
-while getopts "d:p:u:l:h" opt; do
+while getopts "d:p:u:l:a:s:h" opt; do
     case $opt in
 	d)
 	    dirs_to_backup+=("$OPTARG")
