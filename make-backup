@@ -99,6 +99,6 @@ EOF
 mount_location="/run/user/$( id -u )/gvfs/smb-share:server=$server_address,share=$samba_share,user=$samba_user"
 
 for d in "${dirs_to_backup[@]}"; do
-    duplicity --full-if-older-than 6M --no-encryption "$d" "file://$mount_location/$location/$d"
+    duplicity --full-if-older-than 6M --no-encryption "$d" "file://$mount_location/$location$d"
 done
 
