@@ -25,14 +25,13 @@ OPTIONS:
   -h	print this help and exit
 
 EXAMPLE:
-  `basename $0` -p samba_password -u samba_user_name -l "put/backup/here" -d /var/lib -d /usr/lib
+  `basename $0` -p samba_password -u samba_user_name -l "backup/location" -a server_address -s share_name -d /usr/lib
 
   Will backup $HOME, /etc, /var/lib, /usr/lib into
-  smb://maborg.ijs.si/users/put/backup/here$HOME,
-  smb://maborg.ijs.si/users/put/backup/here/etc,
-  smb://maborg.ijs.si/users/put/backup/here/var/lib
+  smb://server_address/share_name/backup/location$HOME
+  smb://server_address/share_name/backup/location/etc
   and
-  smb://maborg.ijs.si/users/put/backup/here/usr/lib
+  smb://server_address/share_name/backup/location/usr/lib
   respectively.
 
   Will create directories as needed.
@@ -42,12 +41,12 @@ EOF
 
 
 dirs_to_backup=( /etc $HOME )
-server="maborg.ijs.si"
-share=users
 
 location=undefined
 password=undefined
 samba_user=undefined
+server_address=undefined
+samba_share=undefined
 
 while getopts "d:p:u:l:h" opt; do
     case $opt in
@@ -56,6 +55,12 @@ while getopts "d:p:u:l:h" opt; do
 	    ;;
 	p)
 	    password=${OPTARG}
+	    ;;
+	a)
+	    server_address=${OPTARG}
+	    ;;
+	s)
+	    samba_share=${OPTARG}
 	    ;;
 	u)
 	    samba_user=${OPTARG}
@@ -75,19 +80,19 @@ while getopts "d:p:u:l:h" opt; do
     esac
 done
 
-if [ ${location} = undefined ] || [ ${password} = undefined ] || [ ${samba_user} = undefined ]; then
-    echo "Missing at least one required option (-l, -p, -u)"
+if [ ${location} = undefined ] || [ ${password} = undefined ] || [ ${samba_user} = undefined ] || [ ${server_address} = undefined ] || [ ${samba_share} = undefined ]; then
+    echo "Missing at least one required option (-l, -p, -u, -a, -s)"
     echo
     display_usage
     exit 1
 fi
 
-gio mount "smb://$samba_user@$server/$share" <<EOF
+gio mount "smb://$samba_user@$server_address/$samba_share" <<EOF
 
 $password
 EOF
 
-mount_location="/run/user/$( id -u )/gvfs/smb-share:server=$server,share=$share,user=$samba_user"
+mount_location="/run/user/$( id -u )/gvfs/smb-share:server=$server_address,share=$samba_share,user=$samba_user"
 
 for d in "${dirs_to_backup[@]}"; do
     duplicity --full-if-older-than 6M --no-encryption "$d" "file://$mount_location/$location/$d"
