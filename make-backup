@@ -22,6 +22,10 @@ OPTIONS:
   -d 	specify addtional directories to backup /etc and $HOME are
    	already included
 
+  -a	the address of the samba server
+
+  -s	the name of the samba share
+
   -h	print this help and exit
 
 EXAMPLE:
