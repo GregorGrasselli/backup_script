@@ -1,0 +1,95 @@
+#!/usr/bin/env bash
+
+# A backup script that uses duplicity to create a backup of the listed
+# directories and stores it on maborg.
+
+# Dependencies: duplicity, gvfs
+
+# Read duplicity manpage for instructions on restoring from backup
+
+function display_usage() {
+    cat <<EOF
+USAGE: $0 [-d dir +] -p password -u user -l location
+
+makes a backup of the specified directories on
+smb://maborg.ijs.si/users/location
+
+OPTIONS:
+  -p	the samba password for the user
+  -u	the samba user name
+  -l 	location of the backup without trailing slash
+
+  -d 	specify addtional directories to backup /etc and $HOME are
+   	already included
+
+  -h	print this help and exit
+
+EXAMPLE:
+  `basename $0` -p samba_password -u samba_user_name -l "put/backup/here" -d /var/lib -d /usr/lib
+
+  Will backup $HOME, /etc, /var/lib, /usr/lib into
+  smb://maborg.ijs.si/users/put/backup/here$HOME,
+  smb://maborg.ijs.si/users/put/backup/here/etc,
+  smb://maborg.ijs.si/users/put/backup/here/var/lib
+  and
+  smb://maborg.ijs.si/users/put/backup/here/usr/lib
+  respectively.
+
+  Will create directories as needed.
+
+EOF
+}
+
+
+dirs_to_backup=( /etc $HOME )
+server="maborg.ijs.si"
+share=users
+
+location=undefined
+password=undefined
+samba_user=undefined
+
+while getopts "d:p:u:l:h" opt; do
+    case $opt in
+	d)
+	    dirs_to_backup+=("$OPTARG")
+	    ;;
+	p)
+	    password=${OPTARG}
+	    ;;
+	u)
+	    samba_user=${OPTARG}
+	    ;;
+	l)
+	    location=${OPTARG}
+	    ;;
+	h)
+	    display_usage
+	    exit 0
+	    ;;
+	*)
+	    echo "Undefined option"
+	    echo
+	    display_usage
+	    exit 1	    
+    esac
+done
+
+if [ ${location} = undefined ] || [ ${password} = undefined ] || [ ${samba_user} = undefined ]; then
+    echo "Missing at least one required option (-l, -p, -u)"
+    echo
+    display_usage
+    exit 1
+fi
+
+gio mount "smb://$samba_user@$server/$share" <<EOF
+
+$password
+EOF
+
+mount_location="/run/user/$( id -u )/gvfs/smb-share:server=$server,share=$share,user=$samba_user"
+
+for d in "${dirs_to_backup[@]}"; do
+    duplicity --full-if-older-than 6M --no-encryption "$d" "file://$mount_location/$location/$d"
+done
+
